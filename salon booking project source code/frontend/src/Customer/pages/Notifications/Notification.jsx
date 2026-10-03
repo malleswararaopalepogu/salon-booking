@@ -7,6 +7,8 @@ import {
 } from "../../../Redux/Notifications/action";
 import NotificationCard from "./NotificationCard";
 
+import { API_BASE_URL } from "../../../config/api";
+
 const Notification = ({type}) => {
   const dispatch = useDispatch();
   const { auth, notification } = useSelector((store) => store);
@@ -18,7 +20,7 @@ const Notification = ({type}) => {
   const [stompClient, setStompClient] = useState(null);
 
   useEffect(() => {
-    const sock = new SockJS("http://localhost:5000/api/notifications/ws");
+    const sock = new SockJS(`${API_BASE_URL}/api/notifications/ws`);
     const stomp = Stomp.over(sock);
     setStompClient(stomp);
   }, []);
