@@ -1,0 +1,381 @@
+services:
+
+  rabbit:
+    image: rabbitmq:4.0-management
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD-SHELL", "docker-entrypoint.sh rabbitmq-diagnostics check_port_connectivity" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - zosh
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    command: --innodb-buffer-pool-size=128M --max-connections=100
+    ports:
+      - "3310:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      timeout: 10s
+      retries: 12
+      interval: 10s
+      start_period: 600s
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+      - mysql_data:/var/lib/mysql
+    networks:
+      - zosh
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7
+    container_name: keycloak
+    ports:
+      - 7080:8080
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+    command:
+      - "start-dev"
+    networks:
+      - zosh
+
+
+
+#  configserver:
+#    image: "zosh/configserver:v1"
+#    ports:
+#      - "8071:8071"
+#    healthcheck:
+#      test: ["CMD-SHELL", "curl --fail --silent configserver:8071/actuator/health/readiness | grep UP || exit 1"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 10
+#      start_period: 10s
+#    container_name: configserver
+#    depends_on:
+#      rabbit:
+#        condition: service_healthy
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 700m
+#    networks:
+#      - zosh
+
+  eurekaserver:
+    image: "zosh/salon-eurekaserver:v1"
+    ports:
+      - "8070:8070"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    container_name: eurekaserver
+#    environment:
+#      SPRING_CONFIG_IMPORT: "configserver:http://configserver:8071/"
+#    depends_on:
+#      configserver:
+#        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - zosh
+
+
+  user:
+    image: "zosh/salon-user:v1"
+    ports:
+      - "5001:5001"
+    container_name: user
+    healthcheck:
+      test: "curl --fail --silent localhost:5001/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      #      configserver:
+      #        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "user"
+      SPRING_PROFILES_ACTIVE: default
+      #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/userdb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+  salon:
+    image: "zosh/salon:v1"
+    ports:
+      - "5002:5002"
+    container_name: salon
+    healthcheck:
+      test: "curl --fail --silent localhost:5002/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+#      configserver:
+#        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "salon"
+      SPRING_PROFILES_ACTIVE: default
+#      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/salondb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+  booking:
+    image: "zosh/salon-booking:v1"
+    ports:
+      - "5003:5003"
+    container_name: booking
+    healthcheck:
+      test: "curl --fail --silent booking:5003/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      #      configserver:
+      #        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "booking"
+      SPRING_PROFILES_ACTIVE: default
+      #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/bookingdb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+  category:
+    image: "zosh/salon-category:v1"
+    ports:
+      - "5004:5004"
+    container_name: category
+    healthcheck:
+      test: "curl --fail --silent category:5004/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      #      configserver:
+      #        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "category"
+      SPRING_PROFILES_ACTIVE: default
+      #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/categorydb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+  notification:
+    image: "zosh/salon-notification:v1"
+    ports:
+      - "5005:5005"
+    container_name: notification
+    healthcheck:
+      test: "curl --fail --silent notification:5005/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      #      configserver:
+      #        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "notification"
+      SPRING_PROFILES_ACTIVE: default
+      #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/notificationdb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+  payment:
+    image: "zosh/salon-payment:v1"
+    ports:
+      - "5006:5006"
+    container_name: payment
+    healthcheck:
+      test: "curl --fail --silent payment:5006/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      #      configserver:
+      #        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "payment"
+      SPRING_PROFILES_ACTIVE: default
+      #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/paymentdb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+  review:
+    image: "zosh/salon-review:v1"
+    ports:
+      - "5007:5007"
+    container_name: review
+    healthcheck:
+      test: "curl --fail --silent review:5007/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      #      configserver:
+      #        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "review"
+      SPRING_PROFILES_ACTIVE: default
+      #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/reviewdb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+  service-offering:
+    image: "zosh/salon-service-offering:v1"
+    ports:
+      - "5008:5008"
+    container_name: service-offering
+    healthcheck:
+      test: "curl --fail --silent service-offering:5008/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      #      configserver:
+      #        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "service-offering"
+      SPRING_PROFILES_ACTIVE: default
+      #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/service-offeringdb"
+      SPRING_DATASOURCE_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+    networks:
+      - zosh
+
+
+
+  gatewayserver:
+    image: "zosh/salon-gatewayserver:v1"
+    ports:
+      - "5000:5000"
+    container_name: gatewayserver
+    healthcheck:
+      test: "curl --fail --silent localhost:5000/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+#    depends_on:
+#      configserver:
+#        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    environment:
+      SPRING_APPLICATION_NAME: "gatewayserver"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK-SET-URI: "http://keycloak:8080/realms/master/protocol/openid-connect/certs"
+    networks:
+      - zosh
+
+networks:
+  zosh:
+    driver: "bridge"
+
+volumes:
+  mysql_data:
