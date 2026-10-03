@@ -10,6 +10,7 @@ import com.zosh.payload.request.SignupDto;
 import com.zosh.payload.request.UserRequest;
 import com.zosh.payload.response.TokenResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -28,17 +29,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KeycloakUserService {
 
-    private static final String KEYCLOAK_BASE_URL="http://localhost:8080";
+    @Value("${KEYCLOAK_SERVER_URL:http://localhost:8080}")
+    private String keycloakBaseUrl;
 
-    private static final String KEYCLOAK_ADMIN_API = KEYCLOAK_BASE_URL+"/admin/realms/master/users";
-
-    private static final String TOKEN_URL = KEYCLOAK_BASE_URL+"/realms/master/protocol/openid-connect/token";
     private static final String CLIENT_ID = "salon-booking-client"; // Replace with your client ID
-    private static final String CLIENT_SECRET = System.getenv("KEYCLOAK_CLIENT_SECRET"); // Replace with your client secret
+    @Value("${KEYCLOAK_CLIENT_SECRET}")
+    private String clientSecret;
     private static final String GRANT_TYPE = "password";
     private static final String scope = "openid email profile"; // Adjust grant type if necessary
-    private static final String username = System.getenv("KEYCLOAK_USER_USERNAME");
-    private static final String password = System.getenv("KEYCLOAK_USER_PASSWORD");
+    @Value("${KEYCLOAK_USER_USERNAME}")
+    private String username;
+    @Value("${KEYCLOAK_USER_PASSWORD}")
+    private String password;
     private static  final String clientId = "a43dab90-8534-40ca-b1f1-96f062e16674";
 
     private final RestTemplate restTemplate;
@@ -79,7 +81,7 @@ public class KeycloakUserService {
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
-                    KEYCLOAK_ADMIN_API,
+                    keycloakBaseUrl + "/admin/realms/master/users",
                     HttpMethod.POST,
                     requestEntity,
                     String.class
@@ -126,7 +128,7 @@ public class KeycloakUserService {
 
         MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
         requestBody.add("client_id", CLIENT_ID);
-        requestBody.add("client_secret", CLIENT_SECRET);
+        requestBody.add("client_secret", clientSecret);
         requestBody.add("grant_type", grantType);
         requestBody.add("scope", scope);
         requestBody.add("username", username);
@@ -143,7 +145,7 @@ public class KeycloakUserService {
         try {
 
             ResponseEntity<TokenResponse> response = restTemplate.exchange(
-                    TOKEN_URL,
+                    keycloakBaseUrl + "/realms/master/protocol/openid-connect/token",
                     HttpMethod.POST,
                     requestEntity,
                     TokenResponse.class
@@ -162,7 +164,7 @@ public class KeycloakUserService {
 
 
         // Endpoint URL
-        String url=KEYCLOAK_BASE_URL+"/admin/realms/master/clients/{clientId}/roles/{role}";
+        String url=keycloakBaseUrl+"/admin/realms/master/clients/{clientId}/roles/{role}";
         // Create headers
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + token);
@@ -191,7 +193,7 @@ public class KeycloakUserService {
     }
 
     public KeycloakUserDTO fetchFirstUserByUsername(String username,String token) throws Exception {
-        String url = KEYCLOAK_BASE_URL+"/admin/realms/master/users?username=" + username;
+        String url = keycloakBaseUrl+"/admin/realms/master/users?username=" + username;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -228,7 +230,7 @@ public class KeycloakUserService {
                                  String clientId,
                                  List<KeycloakRole> roles,
                                  String token) throws Exception {
-        String url = KEYCLOAK_BASE_URL+"/admin/realms/master/users/" + userId +
+        String url = keycloakBaseUrl+"/admin/realms/master/users/" + userId +
                 "/role-mappings/clients/" + clientId;
 
         HttpHeaders headers = new HttpHeaders();
@@ -258,7 +260,7 @@ public class KeycloakUserService {
 
     public KeycloakUserinfo fetchUserProfileByJwt(String token) throws Exception {
         System.out.println("keycloak profile token "+ token);
-        String url = KEYCLOAK_BASE_URL+"/realms/master/protocol/openid-connect/userinfo";
+        String url = keycloakBaseUrl+"/realms/master/protocol/openid-connect/userinfo";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

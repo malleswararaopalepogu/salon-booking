@@ -8,7 +8,7 @@ spring:
   datasource:
     url: "jdbc:mysql://localhost:3306/salon_reviewdb?createDatabaseIfNotExist=true"
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
+    username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD}
   jpa:
     hibernate:

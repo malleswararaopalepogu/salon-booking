@@ -1,3 +1,4 @@
+# Run from this directory with: docker compose --env-file ../../.env up
 services:
 
   rabbit:
@@ -6,6 +7,9 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in .env}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
     healthcheck:
       test: [ "CMD-SHELL", "docker-entrypoint.sh rabbitmq-diagnostics check_port_connectivity" ]
       interval: 10s
@@ -22,13 +26,13 @@ services:
     ports:
       - "3310:3306"
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
       timeout: 10s
       retries: 12
       interval: 10s
       start_period: 600s
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
     volumes:
       - ./initdb:/docker-entrypoint-initdb.d:ro
       - mysql_data:/var/lib/mysql
@@ -41,8 +45,8 @@ services:
     ports:
       - 7080:8080
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: "${KC_BOOTSTRAP_ADMIN_USERNAME:?Set KC_BOOTSTRAP_ADMIN_USERNAME in .env}"
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "${KC_BOOTSTRAP_ADMIN_PASSWORD:?Set KC_BOOTSTRAP_ADMIN_PASSWORD in .env}"
     command:
       - "start-dev"
     networks:
@@ -120,8 +124,16 @@ services:
       SPRING_PROFILES_ACTIVE: default
       #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/userdb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
+      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in .env}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_USER_USERNAME: "${KEYCLOAK_USER_USERNAME:?Set KEYCLOAK_USER_USERNAME in .env}"
+      KEYCLOAK_USER_PASSWORD: "${KEYCLOAK_USER_PASSWORD:?Set KEYCLOAK_USER_PASSWORD in .env}"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET:?Set KEYCLOAK_CLIENT_SECRET in .env}"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
       - zosh
@@ -151,8 +163,10 @@ services:
       SPRING_PROFILES_ACTIVE: default
 #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/salondb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
       - zosh
@@ -182,8 +196,12 @@ services:
       SPRING_PROFILES_ACTIVE: default
       #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/bookingdb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
+      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in .env}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
@@ -214,8 +232,10 @@ services:
       SPRING_PROFILES_ACTIVE: default
       #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/categorydb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
       - zosh
@@ -245,8 +265,12 @@ services:
       SPRING_PROFILES_ACTIVE: default
       #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/notificationdb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
+      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in .env}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
@@ -277,8 +301,15 @@ services:
       SPRING_PROFILES_ACTIVE: default
       #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/paymentdb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
+      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in .env}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:?Set RAZORPAY_KEY_ID in .env}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:?Set RAZORPAY_KEY_SECRET in .env}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:?Set STRIPE_SECRET_KEY in .env}"
       SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS: "kafka:9092"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
@@ -309,8 +340,10 @@ services:
       SPRING_PROFILES_ACTIVE: default
       #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/reviewdb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
       - zosh
@@ -340,8 +373,12 @@ services:
       SPRING_PROFILES_ACTIVE: default
       #      SPRING_CONFIG_IMPORT: "optional:configserver:http://configserver:8071/"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/service-offeringdb"
-      SPRING_DATASOURCE_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_USERNAME: "${DB_USERNAME:?Set DB_USERNAME in .env}"
+      DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?Set MAIL_USERNAME in .env}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?Set MAIL_PASSWORD in .env}"
+      RABBITMQ_USERNAME: "${RABBITMQ_USERNAME:?Set RABBITMQ_USERNAME in .env}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}"
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
     networks:
       - zosh
